@@ -64,53 +64,50 @@ function addSomething() {
             name: "dptName",
             type: "input",
             message: "What is the name of the department?",
-            when: item => item.type === "A department",
-            validate: checkNull()
+            when: item => item.type === "departments",
+            validate: value => checkNull(value)
         },
         {
             name: "roleTitle",
             type: "input",
             message: "What is the title of the role?",
-            when: item => item.type === "A role",
-            validate: checkNull()
+            when: item => item.type === "roles",
+            validate: value => checkNull(value)
         },
         {
             name: "roleSalary",
             type: "number",
             message: "What is the salary of the role?",
-            when: item => item.type === "A role",
-            validate: checkNum()
+            when: item => item.type === "roles",
+            validate: value => checkNum(value)
         },
         {
             name: "roleDpt",
             type: "number",
             message: "What is the department ID of the role?",
-            when: item => item.type === "A role",
-            validate: checkNum()
+            when: item => item.type === "roles",
+            validate: value => checkNum(value)
         }
     ]).then(function(answer) {
-        if (answer.something === "departments") {
-            sqlInsertDpt(answer.dptName);
-        } else if (answer.something === "employees") {
+        if (answer.type === "departments") {
+            connection.query(
+                "INSERT INTO departments SET ?",
+                {
+                    dpt_name: answer.dptName
+                },
+                function(err) {
+                    if (err) throw err;
+                    console.log("Added " + answer.dptName + " to departments.");
+                    start();
+                }
+            );
+        } else if (answer.type === "employees") {
             // sqlInsert(answer.something, answer);
-        } else if (answer.something === "roles") {
+        } else if (answer.type === "roles") {
             // sqlInsert(answer.something, answer);
         } else {
             start();
         }
-    });
-};
-
-function sqlInsertDpt(data) {
-    connection.query(
-        "INSERT INTO departments SET ?",
-        {
-            dpt_name: data
-        },
-        function(err) {
-            if (err) throw err;
-            console.log("Added " + data + "to departments.");
-            start();
     });
 };
 
