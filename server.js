@@ -17,6 +17,20 @@ connection.connect(function(err) {
     start();
 });
 
+function checkNull(value) {
+    if (value != "") {
+        return true;
+    }
+    return false;
+};
+
+function checkNum(value) {
+    if (!isNaN(value)) {
+        return true;
+    }
+    return false;
+};
+
 // inquirer prompts the user for what action they should take
 function start() {
     inquirer.prompt({
@@ -39,7 +53,65 @@ function start() {
 };
 
 function addSomething() {
-    //
+    inquirer.prompt([
+        {
+            name: "type",
+            type: "list",
+            message: "What would you like to add to?",
+            choices: ["departments", "employees", "roles", "nevermind"]
+        },
+        {
+            name: "dptName",
+            type: "input",
+            message: "What is the name of the department?",
+            when: item => item.type === "A department",
+            validate: checkNull()
+        },
+        {
+            name: "roleTitle",
+            type: "input",
+            message: "What is the title of the role?",
+            when: item => item.type === "A role",
+            validate: checkNull()
+        },
+        {
+            name: "roleSalary",
+            type: "number",
+            message: "What is the salary of the role?",
+            when: item => item.type === "A role",
+            validate: checkNum()
+        },
+        {
+            name: "roleDpt",
+            type: "number",
+            message: "What is the department ID of the role?",
+            when: item => item.type === "A role",
+            validate: checkNum()
+        }
+    ]).then(function(answer) {
+        if (answer.something === "departments") {
+            sqlInsertDpt(answer.dptName);
+        } else if (answer.something === "employees") {
+            // sqlInsert(answer.something, answer);
+        } else if (answer.something === "roles") {
+            // sqlInsert(answer.something, answer);
+        } else {
+            start();
+        }
+    });
+};
+
+function sqlInsertDpt(data) {
+    connection.query(
+        "INSERT INTO departments SET ?",
+        {
+            dpt_name: data
+        },
+        function(err) {
+            if (err) throw err;
+            console.log("Added " + data + "to departments.");
+            start();
+    });
 };
 
 function viewSomething() {
@@ -52,51 +124,23 @@ function updateSomething() {
 
 /*
 // function to handle posting new items up for auction
-function postAuction() {
-  // prompt for info about the item being put up for auction
-  inquirer
-    .prompt([
-      {
-        name: "item",
-        type: "input",
-        message: "What is the item you would like to submit?"
-      },
-      {
-        name: "category",
-        type: "input",
-        message: "What category would you like to place your auction in?"
-      },
-      {
-        name: "startingBid",
-        type: "input",
-        message: "What would you like your starting bid to be?",
-        validate: function(value) {
-          if (isNaN(value) === false) {
-            return true;
-          }
-          return false;
-        }
-      }
-    ])
-    .then(function(answer) {
-      // when finished prompting, insert a new item into the db with that info
-      connection.query(
-        "INSERT INTO auctions SET ?",
-        {
-          item_name: answer.item,
-          category: answer.category,
-          starting_bid: answer.startingBid || 0,
-          highest_bid: answer.startingBid || 0
-        },
-        function(err) {
-          if (err) throw err;
-          console.log("Your auction was created successfully!");
-          // re-prompt the user for if they want to bid or post
-          start();
-        }
-      );
-    });
-}
+// prompt for info about the item being put up for auction
+// when finished prompting, insert a new item into the db with that info
+    connection.query(
+    "INSERT INTO auctions SET ?",
+    {
+        item_name: answer.item,
+        category: answer.category,
+        starting_bid: answer.startingBid || 0,
+        highest_bid: answer.startingBid || 0
+    },
+    function(err) {
+        if (err) throw err;
+        console.log("Your auction was created successfully!");
+        // re-prompt the user for if they want to bid or post
+        start();
+    }
+    );
 
 function bidAuction() {
   // query the database for all items being auctioned
@@ -160,4 +204,11 @@ function bidAuction() {
       });
   });
 }
+*/
+
+/*
+Update employee managers
+View employees by manager
+Delete departments, roles, and employees
+View the total utilized budget of a department -- ie the combined salaries of all employees in that department
 */

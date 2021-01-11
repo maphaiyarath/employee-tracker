@@ -29,6 +29,8 @@ CREATE TABLE employees (
     FOREIGN KEY (manager_id) REFERENCES employees(id)
 );
 
-INSERT INTO departments(dpt_name) VALUES ('creative');
-INSERT INTO departments(dpt_name) VALUES ('data');
-INSERT INTO departments(dpt_name) VALUES ('engineering');
+INSERT INTO departments(dpt_name) VALUES('Creative');
+INSERT INTO departments(dpt_name) VALUES('Data');
+INSERT INTO departments(dpt_name) VALUES('Engineering');
+
+-- INSERT INTO roles(title, salary, dpt_id) VALUES('Technical Director', 103000, '');
