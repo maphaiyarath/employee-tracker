@@ -5,7 +5,7 @@ USE employee_db;
 
 CREATE TABLE departments (
     id INT NOT NULL AUTO_INCREMENT,
-    name VARCHAR(30) NOT NULL,
+    dpt_name VARCHAR(30) NOT NULL,
     PRIMARY KEY(id)
 );
 
@@ -29,5 +29,6 @@ CREATE TABLE employees (
     FOREIGN KEY (manager_id) REFERENCES employees(id)
 );
 
--- INSERT INTO clients (client_name) VALUES ('Vincent');
--- INSERT INTO parties (party_name, party_type, party_cost, client_id) VALUES ('Everybody Loves Raymond', 'tv', 500, 1);
+INSERT INTO departments(dpt_name) VALUES ('creative');
+INSERT INTO departments(dpt_name) VALUES ('data');
+INSERT INTO departments(dpt_name) VALUES ('engineering');

@@ -14,13 +14,16 @@ var connection = mysql.createConnection({
 // connect to the mysql server and sql database
 connection.connect(function(err) {
     if (err) throw err;
-    console.log(process.env.DB_HOST);
+    start();
 });
 
-/*
-// function which prompts the user for what action they should take
+// inquirer prompts the user for what action they should take
 function start() {
-  inquirer
+    //
+};
+
+/*
+inquirer
     .prompt({
       name: "postOrBid",
       type: "list",
