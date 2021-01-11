@@ -32,6 +32,13 @@ Use the following command for installation:
 npm install
 ```
 
+To get into your MySQL console and create the database with the `seeds.sql`, you can run the following:
+```bash
+mysql -u root -p
+source seeds.sql
+exit
+```
+
 ## Usage
 The application will be invoked by running:
 ```bash
