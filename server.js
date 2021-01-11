@@ -19,30 +19,38 @@ connection.connect(function(err) {
 
 // inquirer prompts the user for what action they should take
 function start() {
+    inquirer.prompt({
+        name: "action",
+        type: "list",
+        message: "What would you like to do?",
+        choices: ["Add a department / employee / role", "View a department / employee / role", "Update an employee role", "Exit"]
+    }).then(function(answer) {
+        // based on the answer, call the corresponding function
+        if (answer.action === "Add a department / employee / role") {
+            addSomething();
+        } else if (answer.action === "View a department / employee / role") {
+            viewSomething();
+        } else if (answer.action === "Update an employee role") {
+            updateSomething();
+        } else {
+            connection.end();
+        }
+    });
+};
+
+function addSomething() {
+    //
+};
+
+function viewSomething() {
+    //
+};
+
+function updateSomething() {
     //
 };
 
 /*
-inquirer
-    .prompt({
-      name: "postOrBid",
-      type: "list",
-      message: "Would you like to [POST] an auction or [BID] on an auction?",
-      choices: ["POST", "BID", "EXIT"]
-    })
-    .then(function(answer) {
-      // based on their answer, either call the bid or the post functions
-      if (answer.postOrBid === "POST") {
-        postAuction();
-      }
-      else if(answer.postOrBid === "BID") {
-        bidAuction();
-      } else{
-        connection.end();
-      }
-    });
-}
-
 // function to handle posting new items up for auction
 function postAuction() {
   // prompt for info about the item being put up for auction
