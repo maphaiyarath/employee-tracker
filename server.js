@@ -32,6 +32,10 @@ function checkNum(value) {
     return false;
 };
 
+function getAll() {
+    //
+}
+
 // inquirer prompts the user for what action they should take
 function start() {
     inquirer.prompt({
@@ -84,10 +88,26 @@ function addSomething() {
         },
         {
             name: "roleDpt",
-            type: "number",
-            message: "What is the department ID of the role?",
+            type: "rawlist",
+            message: "Which department is the role in?",
             when: item => item.type === "roles",
-            validate: value => checkNum(value)
+            choices: function() {
+                var choiceArray = [];
+                connection.query(
+                    "SELECT dpt_name FROM departments",
+                    function(err, res, fields) {
+                        if (err) throw err;
+                        for (var i = 0; i < res.length; i++) {
+                            console.log(i + res[i].dpt_name);
+                            choiceArray.push(res[i].dpt_name);
+                        }
+                        
+                    }
+                ).then(function() {
+                    choiceArray.push('Create a new department.');
+                    return choiceArray;
+                });
+            }
         },
         {
             name: "firstName",
@@ -108,7 +128,11 @@ function addSomething() {
             type: "number",
             message: "What is the role ID of the employee?",
             when: item => item.type === "employees",
-            validate: value => checkNum(value)
+            choices: function() {
+                var choiceArray = [];
+
+                return choiceArray;
+            }
         },
         {
             name: "managerID",
@@ -130,6 +154,7 @@ function sqlInsert(data) {
     let dataDetails;
     let identifier;
 
+    // add a department
     if (data.type === "departments") {
         dataDetails = {
             dpt_name: data.dptName
@@ -143,13 +168,31 @@ function sqlInsert(data) {
             manager_id: data.managerID
         };
         identifier = data.firstName + " " + data.lastName;
+
+    
     } else if (data.type === "roles") {
+        let theID;
+        
+        if (data.roleDpt === "Create a new department.") {
+            createDpt();
+        }
+
+        connection.query(
+            "SELECT id FROM departments WHERE dpt_name = ?",
+            [data.roleDpt],
+            function(err, res, fields) {
+                if (err) throw err;
+                // console.log(res);
+                theID = res;
+            }
+        );
+
         dataDetails = {
-            title: data.title,
-            salary: data.salary,
-            dpt_id: data.dptID
+            title: data.roleTitle,
+            salary: data.roleSalary,
+            dpt_id: theID
         };
-        identifier = data.title;
+        identifier = data.roleTitle;
     }
 
     connection.query(
@@ -161,6 +204,23 @@ function sqlInsert(data) {
             start();
         }
     );
+};
+
+function createDpt() {
+    inquirer.prompt({
+        name: "deptName",
+        type: "input",
+        message: "What is the name of the department?",
+        validate: value => checkNull(value)
+    }).then(function(answer) {
+        connection.query(
+            "INSERT INTO departments SET ?",
+            [{ dpt_name : answer.deptName }],
+            function(err) {
+                if (err) throw err;
+            }
+        );
+    });
 };
 
 function viewSomething() {
@@ -183,17 +243,24 @@ function viewSomething() {
 function sqlSelect(data) {
     let sqlQuery;
 
+    // view departments
     if (data.type === "departments") {
-        sqlQuery = "SELECT * FROM departments";
+        sqlQuery = "SELECT id AS ID, dpt_name AS Name FROM departments";
+
+    // view employees
     } else if (data.type === "employees") {
         sqlQuery = 
-        "SELECT e.first_name, e.last_name, r.title, CONCAT(m.first_name, ' ', m.last_name) \
+        "SELECT e.first_name, e.last_name, r.title AS Role, d.dpt_name AS Department, CONCAT(m.first_name, ' ', m.last_name) AS Manager \
         FROM employees AS e \
         INNER JOIN roles AS r ON e.role_id = r.id \
-        LEFT JOIN e.manager_id = m.id";
+        INNER JOIN departments AS d ON r.dpt_id = d.id \
+        LEFT JOIN employees AS m ON e.manager_id = m.id \
+        ORDER BY e.last_name, e.first_name";
+
+    // view roles
     } else if (data.type === "roles") {
         sqlQuery =
-        "SELECT r.title, r.salary, d.dpt_name \
+        "SELECT r.title AS Title, r.salary As Salary, d.dpt_name as Department\
         FROM roles AS r, departments AS d \
         WHERE r.dpt_id = d.id \
         ORDER BY r.title, d.dpt_name";
@@ -219,9 +286,7 @@ function updateSomething() {
 starting_bid: answer.startingBid || 0,
 highest_bid: answer.startingBid || 0
 
-function bidAuction() {
-  // query the database for all items being auctioned
-  connection.query("SELECT * FROM auctions", function(err, results) {
+connection.query("SELECT * FROM auctions", function(err, results) {
     if (err) throw err;
     inquirerprompt([
         {
@@ -235,25 +300,16 @@ function bidAuction() {
             return choiceArray;
           },
           message: "What auction would you like to place a bid in?"
-        },
-        {
-          name: "bid",
-          type: "input",
-          message: "How much would you like to bid?"
         }
       ])
       .then(function(answer) {
-        // get the information of the chosen item
         var chosenItem;
         for (var i = 0; i < results.length; i++) {
           if (results[i].item_name === answer.choice) {
             chosenItem = results[i];
           }
         }
-
-        // determine if bid was high enough
         if (chosenItem.highest_bid < parseInt(answer.bid)) {
-          // bid was high enough, so update db, let the user know, and start over
           connection.query(
             "UPDATE auctions SET ? WHERE ?",
             [
@@ -271,16 +327,37 @@ function bidAuction() {
 }
 */
 
-
+/*
+async function queryDb (queryParm) {
+  
+        let pool = await sql.connect(config);
+        let data = await pool.request()
+            .input('pr', sql.Int, queryParm)
+            .query("Select FirstName,LastName, Title from Employees   where PerformanceRating=@pr");
+           // Store each record in an array
+           for (let i=0;i<data.rowsAffected;i++){
+                employees.push(data.recordset[i]);
+           }
+     pool.close;
+     sql.close;
+   return employees;
+}
+// async function invocation
+queryDb(rating)
+ .then(result=>{
+result.forEach(item=>{
+            console.log(item);
+        });
+})
+ .catch(err=>{
+     pool.close;
+     sql.close;
+     console.log(err)
+ })
+*/
 
 /*
     Add roles, employees
-    View roles, employees
+    View dpt of employee
     Update employee roles
-
-Bonus points if you're able to:
-    Update employee managers
-    View employees by manager
-    Delete departments, roles, and employees
-    View the total utilized budget of a department -- ie the combined salaries of all employees in that department
 */
