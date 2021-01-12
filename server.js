@@ -1,4 +1,5 @@
 require("dotenv").config();
+const cTable = require("console.table");
 var inquirer = require("inquirer");
 var mysql = require("mysql");
 
@@ -100,7 +101,7 @@ function addSomething() {
 function sqlInsert(data) {
     let dataDetails;
     let identifier;
-    
+
     if (data.type === "departments") {
         dataDetails = {
             dpt_name: data.dptName
@@ -135,7 +136,33 @@ function sqlInsert(data) {
 };
 
 function viewSomething() {
-    //
+    inquirer.prompt([
+        {
+            name: "type",
+            type: "list",
+            message: "What would you like to view?",
+            choices: ["departments", "employees", "roles", "nevermind"]
+        }
+    ]).then(function(answer) {
+        if (answer.type === "nevermind") {
+            start();
+        } else {
+            sqlSelect(answer);
+        }
+    });
+};
+
+function sqlSelect(data) {
+    connection.query(
+        "SELECT * FROM ??",
+        [data.type],
+        function(err, res, fields) {
+            if (err) throw err;
+            const table = cTable.getTable(res);
+            console.log(table);
+            start();
+        }
+    );
 };
 
 function updateSomething() {
@@ -143,10 +170,7 @@ function updateSomething() {
 };
 
 /*
-// function to handle posting new items up for auction
-// prompt for info about the item being put up for auction
-// when finished prompting, insert a new item into the db with that info
-    connection.query(
+connection.query(
     "INSERT INTO auctions SET ?",
     {
         item_name: answer.item,
@@ -226,9 +250,16 @@ function bidAuction() {
 }
 */
 
+
+
 /*
-Update employee managers
-View employees by manager
-Delete departments, roles, and employees
-View the total utilized budget of a department -- ie the combined salaries of all employees in that department
+    Add roles, employees
+    View departments, roles, employees
+    Update employee roles
+
+Bonus points if you're able to:
+    Update employee managers
+    View employees by manager
+    Delete departments, roles, and employees
+    View the total utilized budget of a department -- ie the combined salaries of all employees in that department
 */
