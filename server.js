@@ -88,6 +88,34 @@ function addSomething() {
             message: "What is the department ID of the role?",
             when: item => item.type === "roles",
             validate: value => checkNum(value)
+        },
+        {
+            name: "firstName",
+            type: "input",
+            message: "What is the first name of the employee?",
+            when: item => item.type === "employees",
+            validate: value => checkNull(value)
+        },
+        {
+            name: "lastName",
+            type: "input",
+            message: "What is the last name of the employee?",
+            when: item => item.type === "employees",
+            validate: value => checkNull(value)
+        },
+        {
+            name: "roleID",
+            type: "number",
+            message: "What is the role ID of the employee?",
+            when: item => item.type === "employees",
+            validate: value => checkNum(value)
+        },
+        {
+            name: "managerID",
+            type: "number",
+            message: "What is the manager ID of the employee?",
+            when: item => item.type === "employees",
+            validate: value => checkNum(value)
         }
     ]).then(function(answer) {
         if (answer.type === "nevermind") {
@@ -153,8 +181,26 @@ function viewSomething() {
 };
 
 function sqlSelect(data) {
+    let sqlQuery;
+
+    if (data.type === "departments") {
+        sqlQuery = "SELECT * FROM departments";
+    } else if (data.type === "employees") {
+        sqlQuery = 
+        "SELECT e.first_name, e.last_name, r.title, CONCAT(m.first_name, ' ', m.last_name) \
+        FROM employees AS e \
+        INNER JOIN roles AS r ON e.role_id = r.id \
+        LEFT JOIN e.manager_id = m.id";
+    } else if (data.type === "roles") {
+        sqlQuery =
+        "SELECT r.title, r.salary, d.dpt_name \
+        FROM roles AS r, departments AS d \
+        WHERE r.dpt_id = d.id \
+        ORDER BY r.title, d.dpt_name";
+    }
+
     connection.query(
-        "SELECT * FROM ??",
+        sqlQuery,
         [data.type],
         function(err, res, fields) {
             if (err) throw err;
@@ -170,29 +216,14 @@ function updateSomething() {
 };
 
 /*
-connection.query(
-    "INSERT INTO auctions SET ?",
-    {
-        item_name: answer.item,
-        category: answer.category,
-        starting_bid: answer.startingBid || 0,
-        highest_bid: answer.startingBid || 0
-    },
-    function(err) {
-        if (err) throw err;
-        console.log("Your auction was created successfully!");
-        // re-prompt the user for if they want to bid or post
-        start();
-    }
-    );
+starting_bid: answer.startingBid || 0,
+highest_bid: answer.startingBid || 0
 
 function bidAuction() {
   // query the database for all items being auctioned
   connection.query("SELECT * FROM auctions", function(err, results) {
     if (err) throw err;
-    // once you have the items, prompt the user for which they'd like to bid on
-    inquirer
-      .prompt([
+    inquirerprompt([
         {
           name: "choice",
           type: "rawlist",
@@ -232,18 +263,8 @@ function bidAuction() {
               {
                 id: chosenItem.id
               }
-            ],
-            function(error) {
-              if (error) throw err;
-              console.log("Bid placed successfully!");
-              start();
-            }
+            ]
           );
-        }
-        else {
-          // bid wasn't high enough, so apologize and start over
-          console.log("Your bid was too low. Try again...");
-          start();
         }
       });
   });
@@ -254,7 +275,7 @@ function bidAuction() {
 
 /*
     Add roles, employees
-    View departments, roles, employees
+    View roles, employees
     Update employee roles
 
 Bonus points if you're able to:
