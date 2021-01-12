@@ -18,7 +18,7 @@ connection.connect(function(err) {
 });
 
 function checkNull(value) {
-    if (value != "") {
+    if (value.trim() !== "") {
         return true;
     }
     return false;
@@ -89,26 +89,49 @@ function addSomething() {
             validate: value => checkNum(value)
         }
     ]).then(function(answer) {
-        if (answer.type === "departments") {
-            connection.query(
-                "INSERT INTO departments SET ?",
-                {
-                    dpt_name: answer.dptName
-                },
-                function(err) {
-                    if (err) throw err;
-                    console.log("Added " + answer.dptName + " to departments.");
-                    start();
-                }
-            );
-        } else if (answer.type === "employees") {
-            // sqlInsert(answer.something, answer);
-        } else if (answer.type === "roles") {
-            // sqlInsert(answer.something, answer);
-        } else {
+        if (answer.type === "nevermind") {
             start();
+        } else {
+            sqlInsert(answer);
         }
     });
+};
+
+function sqlInsert(data) {
+    let dataDetails;
+    let identifier;
+    
+    if (data.type === "departments") {
+        dataDetails = {
+            dpt_name: data.dptName
+        };
+        identifier = data.dptName;
+    } else if (data.type === "employees") {
+        dataDetails = {
+            first_name: data.firstName,
+            last_name: data.lastName,
+            role_id: data.roleID,
+            manager_id: data.managerID
+        };
+        identifier = data.firstName + " " + data.lastName;
+    } else if (data.type === "roles") {
+        dataDetails = {
+            title: data.title,
+            salary: data.salary,
+            dpt_id: data.dptID
+        };
+        identifier = data.title;
+    }
+
+    connection.query(
+        "INSERT INTO ?? SET ?",
+        [data.type, dataDetails],
+        function(err) {
+            if (err) throw err;
+            console.log("Added " + identifier + " to " + data.type + ".");
+            start();
+        }
+    );
 };
 
 function viewSomething() {
