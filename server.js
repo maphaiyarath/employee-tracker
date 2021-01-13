@@ -142,6 +142,12 @@ function addSomething(theType) {
             validate: value => checkNum(value)
         },
         {
+            name: "hasManager",
+            type: "confirm",
+            message: "Does this employee have a manager?",
+            when: theType === "employees"
+        },
+        {
             name: "managerID",
             type: "number",
             message: function() {
@@ -157,9 +163,9 @@ function addSomething(theType) {
                         console.log("\n" + table);
                     }
                 );
-                return "What (if any) is the manager ID of that employee?"
+                return "What is the manager ID of that employee?"
             },
-            when: theType === "employees"
+            when: item => item.hasManager === true
         }
         // ===============================================================
     ]).then(function(answer) {
@@ -181,12 +187,21 @@ function sqlInsert(theType, data) {
 
     // add an employee
     } else if (theType === "employees") {
-        dataDetails = {
-            first_name: data.firstName,
-            last_name: data.lastName,
-            role_id: data.roleID,
-            manager_id: data.managerID
-        };
+        if (data.hasManager === true) {
+            dataDetails = {
+                first_name: data.firstName,
+                last_name: data.lastName,
+                role_id: data.roleID,
+                manager_id: data.managerID
+            };
+        } else {
+            dataDetails = {
+                first_name: data.firstName,
+                last_name: data.lastName,
+                role_id: data.roleID
+            };
+        }
+        
         identifier = data.firstName + " " + data.lastName;
 
     // add a role
@@ -316,103 +331,3 @@ function sqlUpdate(theType, data) {
         }
     );
 };
-
-// TODO
-function createDpt() {
-    inquirer.prompt({
-        name: "deptName",
-        type: "input",
-        message: "What is the name of the department?",
-        validate: value => checkNull(value)
-    }).then(function(answer) {
-        connection.query(
-            "INSERT INTO departments SET ?",
-            [{ dpt_name : answer.deptName }],
-            function(err) {
-                if (err) throw err;
-            }
-        );
-    });
-};
-
-async function getEmployees() {
-    try {
-        var choices = [];
-        var result = await connection.query(
-            "SELECT id from employees",
-            function(err, res, fields) {
-                if (err) throw err;
-                const table = cTable.getTable(res);
-                //console.log(table);
-                for (var i = 0; i < res.length; i++) {
-                    choices.push(res[i]);
-                }
-                return choices;
-            }
-        );
-        
-    } catch {if (err) throw err;} finally {}
-}
-
-//Update employee roles
-
-/*
-starting_bid: answer.startingBid || 0,
-highest_bid: answer.startingBid || 0
-
-connection.query("SELECT * FROM auctions", function(err, results) {
-    if (err) throw err;
-    inquirerprompt([
-        {
-          name: "choice",
-          type: "rawlist",
-          choices: function() {
-            var choiceArray = [];
-            for (var i = 0; i < results.length; i++) {
-              choiceArray.push(results[i].item_name);
-            }
-            return choiceArray;
-          },
-          message: "What auction would you like to place a bid in?"
-        }
-      ])
-      .then(function(answer) {
-        var chosenItem;
-        for (var i = 0; i < results.length; i++) {
-          if (results[i].item_name === answer.choice) {
-            chosenItem = results[i];
-          }
-        }
-      });
-  });
-}
-*/
-
-/*
-async function queryDb (queryParm) {
-  
-        let pool = await sql.connect(config);
-        let data = await pool.request()
-            .input('pr', sql.Int, queryParm)
-            .query("Select FirstName,LastName, Title from Employees   where PerformanceRating=@pr");
-           // Store each record in an array
-           for (let i=0;i<data.rowsAffected;i++){
-                employees.push(data.recordset[i]);
-           }
-     pool.close;
-     sql.close;
-   return employees;
-}
-// async function invocation
-queryDb(rating)
-    .then(result=>{
-        result.forEach(item=>{
-            console.log(item);
-        });
-    })
-    .catch(err=>{
-        pool.close;
-        sql.close;
-        console.log(err)
-    })
-*/
