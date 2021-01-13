@@ -32,102 +32,97 @@ function checkNum(value) {
     return false;
 };
 
-function getAll() {
-    //
-}
-
 // inquirer prompts the user for what action they should take
 function start() {
     inquirer.prompt({
         name: "action",
         type: "list",
         message: "What would you like to do?",
-        choices: ["Add a department / employee / role", "View a department / employee / role", "Update an employee role", "Exit"]
+        choices: ["Add a department", "Add an employee", "Add a role", "View departments", "View employees", "View roles", "Update an employee role", "Exit"]
     }).then(function(answer) {
         // based on the answer, call the corresponding function
-        if (answer.action === "Add a department / employee / role") {
-            addSomething();
-        } else if (answer.action === "View a department / employee / role") {
-            viewSomething();
+        if (answer.action === "Add a department") {
+            addSomething("departments");
+        } else if (answer.action === "Add an employee") {
+            addSomething("employees");
+        } else if (answer.action === "Add a role") {
+            addSomething("roles");
+        } else if (answer.action === "View departments") {
+            viewSomething("departments");
+        } else if (answer.action === "View employees") {
+            viewSomething("employees");
+        } else if (answer.action === "View roles") {
+            viewSomething("roles");
         } else if (answer.action === "Update an employee role") {
-            updateSomething();
+            updateSomething("employees");
         } else {
             connection.end();
         }
     });
 };
 
-function addSomething() {
+function addSomething(theType) {
     inquirer.prompt([
-        {
-            name: "type",
-            type: "list",
-            message: "What would you like to add to?",
-            choices: ["departments", "employees", "roles", "nevermind"]
-        },
+        // ===============================================================
         {
             name: "dptName",
             type: "input",
             message: "What is the name of the department?",
-            when: item => item.type === "departments",
+            when: theType === "departments",
             validate: value => checkNull(value)
         },
+        // ===============================================================
         {
             name: "roleTitle",
             type: "input",
             message: "What is the title of the role?",
-            when: item => item.type === "roles",
+            when: theType === "roles",
             validate: value => checkNull(value)
         },
         {
             name: "roleSalary",
             type: "number",
             message: "What is the salary of the role?",
-            when: item => item.type === "roles",
+            when: theType === "roles",
             validate: value => checkNum(value)
         },
         {
             name: "roleDpt",
-            type: "rawlist",
-            message: "Which department is the role in?",
-            when: item => item.type === "roles",
-            choices: function() {
-                var choiceArray = [];
+            type: "number",
+            message: function() {
                 connection.query(
-                    "SELECT dpt_name FROM departments",
+                    "SELECT id AS ID, dpt_name AS Department FROM departments",
                     function(err, res, fields) {
                         if (err) throw err;
-                        for (var i = 0; i < res.length; i++) {
-                            console.log(i + res[i].dpt_name);
-                            choiceArray.push(res[i].dpt_name);
-                        }
-                        
+                        const table = cTable.getTable(res);
+                        console.log("\n" + table);
                     }
-                ).then(function() {
-                    choiceArray.push('Create a new department.');
-                    return choiceArray;
-                });
-            }
+                );
+                return "What is the ID of the department that the role is in?"
+            },
+            when: theType === "roles",
+            validate: value => checkNum(value)
         },
+        // ===============================================================
         {
             name: "firstName",
             type: "input",
             message: "What is the first name of the employee?",
-            when: item => item.type === "employees",
+            when: theType === "employees",
             validate: value => checkNull(value)
         },
         {
             name: "lastName",
             type: "input",
             message: "What is the last name of the employee?",
-            when: item => item.type === "employees",
+            when: theType === "employees",
             validate: value => checkNull(value)
         },
         {
             name: "roleID",
             type: "number",
             message: "What is the role ID of the employee?",
-            when: item => item.type === "employees",
+            when: theType === "employees",
             choices: function() {
                 var choiceArray = [];
 
@@ -141,26 +136,25 @@ function addSomething() {
             when: item => item.type === "employees",
             validate: value => checkNum(value)
         }
+        // ===============================================================
     ]).then(function(answer) {
-        if (answer.type === "nevermind") {
-            start();
-        } else {
-            sqlInsert(answer);
-        }
+        sqlInsert(theType, answer);
     });
 };
 
-function sqlInsert(data) {
+function sqlInsert(theType, data) {
     let dataDetails;
     let identifier;
 
     // add a department
-    if (data.type === "departments") {
+    if (theType === "departments") {
         dataDetails = {
             dpt_name: data.dptName
         };
         identifier = data.dptName;
-    } else if (data.type === "employees") {
+
+    // add an employee
+    } else if (theType === "employees") {
         dataDetails = {
             first_name: data.firstName,
             last_name: data.lastName,
@@ -169,38 +163,22 @@ function sqlInsert(data) {
         };
         identifier = data.firstName + " " + data.lastName;
 
-    
-    } else if (data.type === "roles") {
-        let theID;
-        
-        if (data.roleDpt === "Create a new department.") {
-            createDpt();
-        }
-
-        connection.query(
-            "SELECT id FROM departments WHERE dpt_name = ?",
-            [data.roleDpt],
-            function(err, res, fields) {
-                if (err) throw err;
-                // console.log(res);
-                theID = res;
-            }
-        );
-
+    // add a role
+    } else if (theType === "roles") {
         dataDetails = {
             title: data.roleTitle,
             salary: data.roleSalary,
-            dpt_id: theID
+            dpt_id: data.roleDpt
         };
         identifier = data.roleTitle;
     }
 
     connection.query(
         "INSERT INTO ?? SET ?",
-        [data.type, dataDetails],
+        [theType, dataDetails],
         function(err) {
             if (err) throw err;
-            console.log("Added " + identifier + " to " + data.type + ".");
+            console.log("Added " + identifier + " to " + theType + ".");
             start();
         }
     );
@@ -223,64 +201,133 @@ function createDpt() {
     });
 };
 
-function viewSomething() {
-    inquirer.prompt([
-        {
-            name: "type",
-            type: "list",
-            message: "What would you like to view?",
-            choices: ["departments", "employees", "roles", "nevermind"]
+function viewSomething(theType) {
+    if (theType === "nevermind") {
+        start();
+    } else {
+        let sqlQuery;
+        var items = [];
+
+        // view departments
+        if (theType === "departments") {
+            sqlQuery = "SELECT id AS ID, dpt_name AS Department FROM departments";
+
+        // view employees
+        } else if (theType === "employees") {
+            sqlQuery = 
+            "SELECT e.first_name AS 'First Name', e.last_name AS 'Last Name', r.title AS Role, d.dpt_name AS Department, CONCAT(m.first_name, ' ', m.last_name) AS Manager \
+            FROM employees AS e \
+            INNER JOIN roles AS r ON e.role_id = r.id \
+            INNER JOIN departments AS d ON r.dpt_id = d.id \
+            LEFT JOIN employees AS m ON e.manager_id = m.id \
+            ORDER BY e.last_name, e.first_name";
+
+        // view roles
+        } else if (theType === "roles") {
+            sqlQuery =
+            "SELECT r.title AS Title, r.salary As Salary, d.dpt_name as Department\
+            FROM roles AS r, departments AS d \
+            WHERE r.dpt_id = d.id \
+            ORDER BY r.title, d.dpt_name";
         }
-    ]).then(function(answer) {
-        if (answer.type === "nevermind") {
-            start();
-        } else {
-            sqlSelect(answer);
-        }
-    });
+
+        connection.query(
+            sqlQuery,
+            [theType],
+            function(err, res, fields) {
+                if (err) throw err;
+                const table = cTable.getTable(res);
+                console.log("\n" + table);
+                for (var i = 0; i < res.length; i++) {
+                    items.push(res[i]);
+                }
+                start();
+                return items;
+            }
+        );
+    }
 };
 
-function sqlSelect(data) {
-    let sqlQuery;
+async function getEmployees() {
+    try {
+        var choices = [];
+        var result = await connection.query(
+            "SELECT id from employees",
+            function(err, res, fields) {
+                if (err) throw err;
+                const table = cTable.getTable(res);
+                //console.log(table);
+                for (var i = 0; i < res.length; i++) {
+                    choices.push(res[i]);
+                }
+                return choices;
+            }
+        );
+        
+    } catch {if (err) throw err;} finally {}
+}
 
-    // view departments
-    if (data.type === "departments") {
-        sqlQuery = "SELECT id AS ID, dpt_name AS Name FROM departments";
+function updateSomething() {
 
-    // view employees
-    } else if (data.type === "employees") {
-        sqlQuery = 
-        "SELECT e.first_name, e.last_name, r.title AS Role, d.dpt_name AS Department, CONCAT(m.first_name, ' ', m.last_name) AS Manager \
-        FROM employees AS e \
-        INNER JOIN roles AS r ON e.role_id = r.id \
-        INNER JOIN departments AS d ON r.dpt_id = d.id \
-        LEFT JOIN employees AS m ON e.manager_id = m.id \
-        ORDER BY e.last_name, e.first_name";
+    var emps = getEmployees().then(
+        r => {
+            console.log(r)
+            inquirer.prompt([
+                {
+                    name: "whichEmployee",
+                    type: "list",
+                    message: "Which employee would you like to update?",
+                    choices: emps
+                    //
+                },
+                {
+                    name: "role",
+                    type: "list",
+                    message: "What is the new role of the employee?",
+                    when: item => item.type !== "Nevermind",
+                    choices: function() {
+                        var choiceArray = [];
+        
+                        return choiceArray;
+                    }
+                }
+            ]).then(function(answer) {
+                if (answer.whichEmployee === "Nevermind") {
+                    start();
+                } else {
+                    sqlUpdate(answer);
+                }
+            });
+        }
+    );
+    // console.log(sqlSelect({type: "employees"}));
+    
+};
 
-    // view roles
-    } else if (data.type === "roles") {
-        sqlQuery =
-        "SELECT r.title AS Title, r.salary As Salary, d.dpt_name as Department\
-        FROM roles AS r, departments AS d \
-        WHERE r.dpt_id = d.id \
-        ORDER BY r.title, d.dpt_name";
-    }
-
+function sqlUpdate(data) {
     connection.query(
-        sqlQuery,
-        [data.type],
+        "UPDATE employees SET ? WHERE ?",
+        [
+            {
+                role_id: data.role
+            },
+            {
+                id: data.whichEmployee
+            }
+        ],
         function(err, res, fields) {
             if (err) throw err;
-            const table = cTable.getTable(res);
-            console.log(table);
+            console.log("Updated role.");
             start();
         }
     );
 };
 
-function updateSomething() {
-    //
-};
+/*
+    Add roles
+    Add employees
+    Update employee roles
+*/
 
 /*
 starting_bid: answer.startingBid || 0,
@@ -309,19 +356,6 @@ connection.query("SELECT * FROM auctions", function(err, results) {
             chosenItem = results[i];
           }
         }
-        if (chosenItem.highest_bid < parseInt(answer.bid)) {
-          connection.query(
-            "UPDATE auctions SET ? WHERE ?",
-            [
-              {
-                highest_bid: answer.bid
-              },
-              {
-                id: chosenItem.id
-              }
-            ]
-          );
-        }
       });
   });
 }
@@ -344,20 +378,14 @@ async function queryDb (queryParm) {
 }
 // async function invocation
 queryDb(rating)
- .then(result=>{
-result.forEach(item=>{
+    .then(result=>{
+        result.forEach(item=>{
             console.log(item);
         });
-})
- .catch(err=>{
-     pool.close;
-     sql.close;
-     console.log(err)
- })
-*/
-
-/*
-    Add roles, employees
-    View dpt of employee
-    Update employee roles
+    })
+    .catch(err=>{
+        pool.close;
+        sql.close;
+        console.log(err)
+    })
 */
