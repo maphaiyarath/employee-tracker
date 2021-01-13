@@ -313,6 +313,7 @@ function updateSomething() {
     });
 };
 
+// sql query to update employee role
 function sqlUpdate(theType, data) {
     connection.query(
         "UPDATE employees SET ? WHERE ?",
