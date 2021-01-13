@@ -13,18 +13,16 @@ You can watch the walkthrough video [here](TODO).
 * [Contributing](#contributing)
 
 ## Description
-Developers are often tasked with creating interfaces that make it easy for non-developers to view and interact with information stored in databases. Often these interfaces are known as Content Management Systems. In this homework assignment, your challenge is to architect and build a solution for managing a company's employees using node, inquirer, and MySQL.
+This is a command-line application for managing a company's employees using Node, Inquirer.js, and MySQL. This app allows you to:
+- add departments (employees and roles SOON!)
+- view departments / employees / roles
+- (update employee roles SOON!)
 
-Build a command-line application that at a minimum allows the user to:
-    Add departments, roles, employees
-    View departments, roles, employees
-    Update employee roles
-
-Bonus points if you're able to:
-    Update employee managers
-    View employees by manager
-    Delete departments, roles, and employees
-    View the total utilized budget of a department -- ie the combined salaries of all employees in that department
+Future features could include the ability to:
+- delete departments / employees / roles
+- update employee managers
+- view employees by manager
+- view the total utilized budget of a department, i.e. the combined salaries of all employees in that department
 
 ## Installation
 Use the following command for installation:
