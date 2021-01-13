@@ -18,6 +18,7 @@ connection.connect(function(err) {
     start();
 });
 
+// check if answer is null
 function checkNull(value) {
     if (value.trim() !== "") {
         return true;
@@ -25,6 +26,7 @@ function checkNull(value) {
     return false;
 };
 
+// check if answer is a number
 function checkNum(value) {
     if (!isNaN(value)) {
         return true;
@@ -40,7 +42,7 @@ function start() {
         message: "What would you like to do?",
         choices: ["Add a department", "Add an employee", "Add a role", "View departments", "View employees", "View roles", "Update an employee role", "Exit"]
     }).then(function(answer) {
-        // based on the answer, call the corresponding function
+        // based on the answer, call the corresponding function and argument
         if (answer.action === "Add a department") {
             addSomething("departments");
         } else if (answer.action === "Add an employee") {
@@ -61,9 +63,10 @@ function start() {
     });
 };
 
+// inquirer prompts for info needed to add to db
 function addSomething(theType) {
     inquirer.prompt([
-        // ===============================================================
+        // DPT Qs ========================================================
         {
             name: "dptName",
             type: "input",
@@ -71,7 +74,7 @@ function addSomething(theType) {
             when: theType === "departments",
             validate: value => checkNull(value)
         },
-        // ===============================================================
+        // ROLE Qs =======================================================
         {
             name: "roleTitle",
             type: "input",
@@ -87,23 +90,23 @@ function addSomething(theType) {
             validate: value => checkNum(value)
         },
         {
-            name: "roleDpt",
+            name: "dptID",
             type: "number",
             message: function() {
                 connection.query(
-                    "SELECT id AS ID, dpt_name AS Department FROM departments",
+                    "SELECT dpt_name AS Department, id AS ID FROM departments ORDER BY dpt_name",
                     function(err, res, fields) {
                         if (err) throw err;
                         const table = cTable.getTable(res);
                         console.log("\n" + table);
                     }
                 );
-                return "What is the ID of the department that the role is in?"
+                return "What is the department ID of that role?"
             },
             when: theType === "roles",
             validate: value => checkNum(value)
         },
-        // ===============================================================
+        // EMPLOYEE Qs ===================================================
         {
             name: "firstName",
             type: "input",
@@ -121,20 +124,42 @@ function addSomething(theType) {
         {
             name: "roleID",
             type: "number",
-            message: "What is the role ID of the employee?",
+            message: function() {
+                connection.query(
+                    "SELECT r.title AS Title, d.dpt_name AS Department, r.id AS ID \
+                    FROM roles AS r, departments AS d \
+                    WHERE r.dpt_id = d.id \
+                    ORDER BY r.title",
+                    function(err, res, fields) {
+                        if (err) throw err;
+                        const table = cTable.getTable(res);
+                        console.log("\n" + table);
+                    }
+                );
+                return "What is the role ID of that employee?"
+            },
             when: theType === "employees",
-            choices: function() {
-                var choiceArray = [];
-
-                return choiceArray;
-            }
+            validate: value => checkNum(value)
         },
         {
             name: "managerID",
             type: "number",
-            message: "What is the manager ID of the employee?",
-            when: item => item.type === "employees",
-            validate: value => checkNum(value)
+            message: function() {
+                connection.query(
+                    "SELECT e.last_name AS 'Last Name', e.first_name AS 'First Name', d.dpt_name AS Department, e.id AS ID \
+                    FROM employees AS e \
+                    INNER JOIN roles AS r ON e.role_id = r.id \
+                    INNER JOIN departments AS d ON r.dpt_id = d.id \
+                    ORDER BY e.last_name, e.first_name",
+                    function(err, res, fields) {
+                        if (err) throw err;
+                        const table = cTable.getTable(res);
+                        console.log("\n" + table);
+                    }
+                );
+                return "What (if any) is the manager ID of that employee?"
+            },
+            when: theType === "employees"
         }
         // ===============================================================
     ]).then(function(answer) {
@@ -142,6 +167,7 @@ function addSomething(theType) {
     });
 };
 
+// sql query to add item
 function sqlInsert(theType, data) {
     let dataDetails;
     let identifier;
@@ -168,7 +194,7 @@ function sqlInsert(theType, data) {
         dataDetails = {
             title: data.roleTitle,
             salary: data.roleSalary,
-            dpt_id: data.roleDpt
+            dpt_id: data.dptID
         };
         identifier = data.roleTitle;
     }
@@ -184,38 +210,21 @@ function sqlInsert(theType, data) {
     );
 };
 
-function createDpt() {
-    inquirer.prompt({
-        name: "deptName",
-        type: "input",
-        message: "What is the name of the department?",
-        validate: value => checkNull(value)
-    }).then(function(answer) {
-        connection.query(
-            "INSERT INTO departments SET ?",
-            [{ dpt_name : answer.deptName }],
-            function(err) {
-                if (err) throw err;
-            }
-        );
-    });
-};
-
+// sql queries to view something
 function viewSomething(theType) {
     if (theType === "nevermind") {
         start();
     } else {
         let sqlQuery;
-        var items = [];
 
         // view departments
         if (theType === "departments") {
-            sqlQuery = "SELECT id AS ID, dpt_name AS Department FROM departments";
+            sqlQuery = "dpt_name AS Department, SELECT id AS ID FROM departments ORDER BY dpt_name";
 
         // view employees
         } else if (theType === "employees") {
             sqlQuery = 
-            "SELECT e.first_name AS 'First Name', e.last_name AS 'Last Name', r.title AS Role, d.dpt_name AS Department, CONCAT(m.first_name, ' ', m.last_name) AS Manager \
+            "SELECT e.last_name AS 'Last Name', e.first_name AS 'First Name', r.title AS Role, d.dpt_name AS Department, CONCAT(m.first_name, ' ', m.last_name) AS Manager \
             FROM employees AS e \
             INNER JOIN roles AS r ON e.role_id = r.id \
             INNER JOIN departments AS d ON r.dpt_id = d.id \
@@ -225,7 +234,7 @@ function viewSomething(theType) {
         // view roles
         } else if (theType === "roles") {
             sqlQuery =
-            "SELECT r.title AS Title, r.salary As Salary, d.dpt_name as Department\
+            "SELECT r.title AS Title, r.salary As Salary, d.dpt_name AS Department \
             FROM roles AS r, departments AS d \
             WHERE r.dpt_id = d.id \
             ORDER BY r.title, d.dpt_name";
@@ -238,34 +247,11 @@ function viewSomething(theType) {
                 if (err) throw err;
                 const table = cTable.getTable(res);
                 console.log("\n" + table);
-                for (var i = 0; i < res.length; i++) {
-                    items.push(res[i]);
-                }
                 start();
-                return items;
             }
         );
     }
 };
-
-async function getEmployees() {
-    try {
-        var choices = [];
-        var result = await connection.query(
-            "SELECT id from employees",
-            function(err, res, fields) {
-                if (err) throw err;
-                const table = cTable.getTable(res);
-                //console.log(table);
-                for (var i = 0; i < res.length; i++) {
-                    choices.push(res[i]);
-                }
-                return choices;
-            }
-        );
-        
-    } catch {if (err) throw err;} finally {}
-}
 
 function updateSomething() {
 
@@ -323,8 +309,44 @@ function sqlUpdate(data) {
     );
 };
 
+// TODO
+function createDpt() {
+    inquirer.prompt({
+        name: "deptName",
+        type: "input",
+        message: "What is the name of the department?",
+        validate: value => checkNull(value)
+    }).then(function(answer) {
+        connection.query(
+            "INSERT INTO departments SET ?",
+            [{ dpt_name : answer.deptName }],
+            function(err) {
+                if (err) throw err;
+            }
+        );
+    });
+};
+
+async function getEmployees() {
+    try {
+        var choices = [];
+        var result = await connection.query(
+            "SELECT id from employees",
+            function(err, res, fields) {
+                if (err) throw err;
+                const table = cTable.getTable(res);
+                //console.log(table);
+                for (var i = 0; i < res.length; i++) {
+                    choices.push(res[i]);
+                }
+                return choices;
+            }
+        );
+        
+    } catch {if (err) throw err;} finally {}
+}
+
 /*
-    Add roles
     Add employees
     Update employee roles
 */
