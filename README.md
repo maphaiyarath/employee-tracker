@@ -14,9 +14,9 @@ You can watch the walkthrough video [here](TODO).
 
 ## Description
 This is a command-line application for managing a company's employees using Node, Inquirer.js, and MySQL. This app allows you to:
-- add departments (employees and roles SOON!)
+- add departments / employees / roles
 - view departments / employees / roles
-- (update employee roles SOON!)
+- update employee roles
 
 Future features could include the ability to:
 - delete departments / employees / roles
