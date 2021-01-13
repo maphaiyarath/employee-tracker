@@ -40,7 +40,7 @@ function start() {
         name: "action",
         type: "list",
         message: "What would you like to do?",
-        choices: ["Add a department", "Add an employee", "Add a role", "View departments", "View employees", "View roles", "Update an employee role", "Exit"]
+        choices: ["Add a department", "Add an employee", "Add a role", new inquirer.Separator(), "View departments", "View employees", "View roles", new inquirer.Separator(), "Update an employee role", new inquirer.Separator(), "Exit", new inquirer.Separator()]
     }).then(function(answer) {
         // based on the answer, call the corresponding function and argument
         if (answer.action === "Add a department") {
@@ -212,14 +212,11 @@ function sqlInsert(theType, data) {
 
 // sql queries to view something
 function viewSomething(theType) {
-    if (theType === "nevermind") {
-        start();
-    } else {
-        let sqlQuery;
+    let sqlQuery;
 
         // view departments
         if (theType === "departments") {
-            sqlQuery = "dpt_name AS Department, SELECT id AS ID FROM departments ORDER BY dpt_name";
+            sqlQuery = "SELECT dpt_name AS Department, id AS ID FROM departments ORDER BY dpt_name";
 
         // view employees
         } else if (theType === "employees") {
@@ -234,7 +231,7 @@ function viewSomething(theType) {
         // view roles
         } else if (theType === "roles") {
             sqlQuery =
-            "SELECT r.title AS Title, r.salary As Salary, d.dpt_name AS Department \
+            "SELECT r.title AS Title, d.dpt_name AS Department, r.salary As Salary \
             FROM roles AS r, departments AS d \
             WHERE r.dpt_id = d.id \
             ORDER BY r.title, d.dpt_name";
@@ -250,55 +247,66 @@ function viewSomething(theType) {
                 start();
             }
         );
-    }
 };
 
+// inquirer prompt to update employee role
 function updateSomething() {
-
-    var emps = getEmployees().then(
-        r => {
-            console.log(r)
-            inquirer.prompt([
-                {
-                    name: "whichEmployee",
-                    type: "list",
-                    message: "Which employee would you like to update?",
-                    choices: emps
-                    //
-                },
-                {
-                    name: "role",
-                    type: "list",
-                    message: "What is the new role of the employee?",
-                    when: item => item.type !== "Nevermind",
-                    choices: function() {
-                        var choiceArray = [];
-        
-                        return choiceArray;
+    inquirer.prompt([
+        // EMPLOYEE Qs ===================================================
+        {
+            name: "empID",
+            type: "number",
+            message: function() {
+                connection.query(
+                    "SELECT e.last_name AS 'Last Name', e.first_name AS 'First Name', d.dpt_name AS Department, e.id AS ID \
+                    FROM employees AS e \
+                    INNER JOIN roles AS r ON e.role_id = r.id \
+                    INNER JOIN departments AS d ON r.dpt_id = d.id \
+                    ORDER BY e.last_name, e.first_name",
+                    function(err, res, fields) {
+                        if (err) throw err;
+                        const table = cTable.getTable(res);
+                        console.log("\n" + table);
                     }
-                }
-            ]).then(function(answer) {
-                if (answer.whichEmployee === "Nevermind") {
-                    start();
-                } else {
-                    sqlUpdate(answer);
-                }
-            });
+                );
+                return "What is the ID of the employee to update?"
+            },
+            validate: value => checkNum(value)
+        },
+        {
+            name: "roleID",
+            type: "number",
+            message: function() {
+                connection.query(
+                    "SELECT r.title AS Title, d.dpt_name AS Department, r.id AS ID \
+                    FROM roles AS r, departments AS d \
+                    WHERE r.dpt_id = d.id \
+                    ORDER BY r.title",
+                    function(err, res, fields) {
+                        if (err) throw err;
+                        const table = cTable.getTable(res);
+                        console.log("\n" + table);
+                    }
+                );
+                return "What is the new role ID of that employee?"
+            },
+            validate: value => checkNum(value)
         }
-    );
-    // console.log(sqlSelect({type: "employees"}));
-    
+        // ===============================================================
+    ]).then(function(answer) {
+        sqlUpdate("employees", answer);
+    });
 };
 
-function sqlUpdate(data) {
+function sqlUpdate(theType, data) {
     connection.query(
         "UPDATE employees SET ? WHERE ?",
         [
             {
-                role_id: data.role
+                role_id: data.roleID
             },
             {
-                id: data.whichEmployee
+                id: data.empID
             }
         ],
         function(err, res, fields) {
@@ -346,10 +354,7 @@ async function getEmployees() {
     } catch {if (err) throw err;} finally {}
 }
 
-/*
-    Add employees
-    Update employee roles
-*/
+//Update employee roles
 
 /*
 starting_bid: answer.startingBid || 0,
